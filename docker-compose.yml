@@ -1,0 +1,59 @@
+
+
+services:
+  # PostgreSQL база данных
+  postgres:
+    image: postgres:15-alpine
+    container_name: review_db
+    environment:
+      POSTGRES_DB: reviews
+      POSTGRES_USER: review_user
+      POSTGRES_PASSWORD: review_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U review_user -d reviews"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis для кэширования и Celery
+  redis:
+    image: redis:7-alpine
+    container_name: review_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Основное приложение FastAPI
+  app:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    container_name: review_app
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://review_user:review_password@postgres:5432/reviews
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/1
+      - CELERY_RESULT_BACKEND=redis://redis:6379/2
+      - USE_TRANSFORMERS=true
+      - FALLBACK_TO_TEXTBLOB=true
+  
+    volumes:
+      - .:/app
+      - ~/.cache/huggingface:/home/appuser/.cache/huggingface
+
+volumes:
+  postgres_data:
+  redis_data:
