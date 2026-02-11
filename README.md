@@ -115,3 +115,12 @@ source venv/bin/activate
 
 # 4. Установите зависимости
 pip install -r requirements.txt
+
+# 5 запуск FastAPI 
+uvicorn app.main:app --host 0.0.0.0 --port 8000
+
+# 6 запуск GUI
+python gui.py
+
+# 7 запуск формы заполенения отзывов
+ .\web_form.ps1 
